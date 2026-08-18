@@ -5,15 +5,16 @@
    of typing the same colour code in ten different places.
    ------------------------------------------------------------- */
 :root {
-  --bg: #1a2030;          /* main background, dark blue-grey */
-  --card-bg: #232a3d;     /* task cards + columns */
-  --border: #323c54;
-  --ink: #eef0f5;         /* main text colour */
-  --ink-soft: #8a91a8;    /* secondary/faded text */
-  --todo: #e0a25c;
-  --waiting: #d9c15c;
-  --finished: #6bbf8a;
-  --accent: #5c8bf6;      /* the "Add" button */
+  --bg: #e8c9ce;          /* main background, dusty pink */
+  --card-bg: #fffaf9;     /* task cards + columns */
+  --border: #e6bfc4;
+  --ink: #4a2f2b;         /* main text colour */
+  --ink-soft: #9c7a78;    /* secondary/faded text */
+  --title: #8f3430;       /* brick red, used for the "Organiser" title */
+  --todo: #c4674f;
+  --waiting: #c98fa0;
+  --finished: #7fa583;
+  --accent: #8f3430;      /* the "Add" button */
   --danger: #e0616b;
   --radius: 10px;
 }
@@ -44,8 +45,10 @@ header {
 }
 
 h1 {
-  font-size: 22px;
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: 26px;
   font-weight: 700;
+  color: var(--title);
   margin: 0;
   letter-spacing: -0.01em;
 }
@@ -76,7 +79,7 @@ h1 {
 
 .add-form button {
   background: var(--accent);
-  color: #0d1220;
+  color: #ffffff;
   border: none;
   border-radius: var(--radius);
   padding: 0 20px;
