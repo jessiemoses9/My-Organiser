@@ -37,8 +37,16 @@
         autocomplete="off"
         required
       />
+      <select id="add-category" aria-label="Category"></select>
       <button type="submit">Add</button>
     </form>
+
+    <!-- Category filter pills, plus a toggle for the rename/add/delete panel. -->
+    <div class="category-bar">
+      <div id="category-filters" class="category-filters"></div>
+      <button id="manage-categories-btn" type="button" class="manage-btn">Manage</button>
+    </div>
+    <div id="manage-panel" class="manage-panel hidden"></div>
 
     <main class="board">
       <section class="column" data-status="todo">
