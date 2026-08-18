@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <!-- viewport-fit=cover lets the app draw edge-to-edge on phones with a notch -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Organiser</title>
+
+  <!-- These three meta/link tags are what let the app be "Added to Home Screen"
+       on a phone and behave like a real app (no browser bar, its own icon). -->
+  <meta name="theme-color" content="#1a2030" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Organiser" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="icon" href="icons/icon-192.png" />
+  <link rel="manifest" href="manifest.json" />
+
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Organiser</h1>
+      <span id="week-range" class="week-range"></span>
+    </header>
+
+    <!-- The form used to add a new task. It always adds to the "To Do" column. -->
+    <form id="add-form" class="add-form">
+      <input
+        id="add-input"
+        type="text"
+        placeholder="Add a task..."
+        autocomplete="off"
+        required
+      />
+      <button type="submit">Add</button>
+    </form>
+
+    <main class="board">
+      <section class="column" data-status="todo">
+        <div class="column-header">
+          <span class="dot todo"></span>
+          To Do
+          <span class="count" id="count-todo">0</span>
+        </div>
+        <div class="items" id="items-todo"></div>
+      </section>
+
+      <section class="column" data-status="waiting">
+        <div class="column-header">
+          <span class="dot waiting"></span>
+          Waiting On
+          <span class="count" id="count-waiting">0</span>
+        </div>
+        <div class="items" id="items-waiting"></div>
+      </section>
+
+      <section class="column" data-status="finished">
+        <div class="column-header">
+          <span class="dot finished"></span>
+          Finished
+          <span class="count" id="count-finished">0</span>
+        </div>
+        <div class="items" id="items-finished"></div>
+      </section>
+    </main>
+
+    <footer>
+      Saved on this device only &middot; <span id="task-total"></span>
+    </footer>
+  </div>
+
+  <!-- type="module" just means app.js can use modern JS import syntax if you
+       ever want to split it into multiple files later. Not required today. -->
+  <script src="app.js"></script>
+</body>
+</html>

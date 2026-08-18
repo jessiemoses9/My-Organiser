@@ -1,0 +1,188 @@
+/* ---------------------------------------------------------------
+   All the colours live here as CSS "variables" (the --name: value
+   lines below). Change a value here and it updates everywhere the
+   variable is used — that's the whole point of using them instead
+   of typing the same colour code in ten different places.
+   ------------------------------------------------------------- */
+:root {
+  --bg: #1a2030;          /* main background, dark blue-grey */
+  --card-bg: #232a3d;     /* task cards + columns */
+  --border: #323c54;
+  --ink: #eef0f5;         /* main text colour */
+  --ink-soft: #8a91a8;    /* secondary/faded text */
+  --todo: #e0a25c;
+  --waiting: #d9c15c;
+  --finished: #6bbf8a;
+  --accent: #5c8bf6;      /* the "Add" button */
+  --danger: #e0616b;
+  --radius: 10px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  padding: 24px 16px 48px;
+  /* Keeps content clear of the notch/home-indicator on iPhones when
+     the app is installed full-screen. */
+  padding-top: max(24px, env(safe-area-inset-top));
+  padding-bottom: max(48px, env(safe-area-inset-bottom));
+}
+
+.wrap { max-width: 960px; margin: 0 auto; }
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 18px;
+}
+
+h1 {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.week-range {
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+/* --- Add task form --- */
+.add-form {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.add-form input {
+  flex: 1;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  color: var(--ink);
+  font-size: 15px;
+}
+
+.add-form input::placeholder { color: var(--ink-soft); }
+
+.add-form button {
+  background: var(--accent);
+  color: #0d1220;
+  border: none;
+  border-radius: var(--radius);
+  padding: 0 20px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.add-form button:active { opacity: 0.85; }
+
+/* --- Board / columns --- */
+.board {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+@media (max-width: 720px) {
+  .board { grid-template-columns: 1fr; }
+}
+
+.column {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  min-height: 160px;
+}
+
+.column-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.dot.todo { background: var(--todo); }
+.dot.waiting { background: var(--waiting); }
+.dot.finished { background: var(--finished); }
+
+.count {
+  margin-left: auto;
+  color: var(--ink-soft);
+  font-weight: 500;
+}
+
+.items { display: flex; flex-direction: column; gap: 8px; }
+
+.item {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 10px 10px 12px;
+  font-size: 14px;
+  line-height: 1.4;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.item.finished .item-text {
+  text-decoration: line-through;
+  color: var(--ink-soft);
+}
+
+.item-text { flex: 1; word-break: break-word; }
+
+.item-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.item-actions button {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--ink-soft);
+  border-radius: 6px;
+  font-size: 12px;
+  padding: 4px 7px;
+  cursor: pointer;
+}
+
+.item-actions button:hover { color: var(--ink); border-color: var(--ink-soft); }
+.item-actions button.delete:hover { color: var(--danger); border-color: var(--danger); }
+
+.empty {
+  font-size: 13px;
+  color: var(--ink-soft);
+  font-style: italic;
+  padding: 4px 2px;
+}
+
+footer {
+  margin-top: 24px;
+  font-size: 12px;
+  color: var(--ink-soft);
+  text-align: center;
+}
