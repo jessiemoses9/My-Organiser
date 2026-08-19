@@ -74,8 +74,30 @@
               autocomplete="off"
               required
             />
+            <select id="add-category" class="select-input" aria-label="Category"></select>
+            <select id="add-urgency" class="select-input" aria-label="Urgency">
+              <option value="high">High urgency</option>
+              <option value="medium" selected>Medium urgency</option>
+              <option value="low">Low urgency</option>
+            </select>
+            <input id="add-deadline" class="select-input" type="date" aria-label="Deadline" />
             <button type="submit">Add</button>
           </form>
+
+          <!-- Category filter pills, a sort-by control, and the category manage toggle. -->
+          <div class="board-toolbar">
+            <div id="category-filters" class="category-filters"></div>
+            <div class="toolbar-right">
+              <select id="sort-select" class="select-input" aria-label="Sort by">
+                <option value="deadline">Sort: Deadline</option>
+                <option value="urgency">Sort: Urgency</option>
+                <option value="category">Sort: Category</option>
+                <option value="added">Sort: Date added</option>
+              </select>
+              <button id="manage-categories-btn" type="button" class="manage-btn">Manage</button>
+            </div>
+          </div>
+          <div id="manage-panel" class="manage-panel hidden"></div>
 
           <div class="board">
             <section class="column" data-status="todo">
@@ -87,13 +109,13 @@
               <div class="items" id="items-todo"></div>
             </section>
 
-            <section class="column" data-status="waiting">
+            <section class="column" data-status="standby">
               <div class="column-header">
-                <span class="dot waiting"></span>
-                Waiting On
-                <span class="count" id="count-waiting">0</span>
+                <span class="dot standby"></span>
+                Standby
+                <span class="count" id="count-standby">0</span>
               </div>
-              <div class="items" id="items-waiting"></div>
+              <div class="items" id="items-standby"></div>
             </section>
 
             <section class="column" data-status="finished">
