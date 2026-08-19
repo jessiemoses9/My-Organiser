@@ -3,10 +3,19 @@
 //
 // State lives in localStorage as three things:
 //   categories: [{ id, name, color }]
-//   tasks:      [{ id, text, status, categoryId, urgency, deadline }]
-//     status   is one of "todo", "standby", "finished"
-//     urgency  is one of "high", "medium", "low"
-//     deadline is "YYYY-MM-DD" or null
+//   tasks:      [{ id, text, status, categoryId, urgency, deadline,
+//                  waitingOn, completedAt }]
+//     status      is one of "todo", "standby", "finished"
+//     urgency     is one of "high", "medium", "low"
+//     deadline    is "YYYY-MM-DD" or null
+//     waitingOn   free text (who you're blocked on), only meaningful
+//                 while status is "standby"
+//     completedAt "YYYY-MM-DD" the task was marked finished, or null.
+//                 This is what lets the Finished column be viewed one
+//                 week at a time — To Do and Standby always show your
+//                 full current backlog regardless of which week you're
+//                 looking at, since pending work shouldn't disappear
+//                 just because you navigated away from today.
 //   Plus small UI preferences: which category filter and sort mode
 //   are active, saved so they persist across visits.
 //
@@ -51,6 +60,10 @@ function makeId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
 
+function todayISO() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 /** Read the saved categories from localStorage, seeding defaults on first run. */
 function loadCategories() {
   const raw = localStorage.getItem(CATEGORIES_KEY);
@@ -69,20 +82,26 @@ function saveCategories(list) {
 }
 
 /** Read the saved tasks from localStorage, filling in defaults for any field
- *  that predates this version of the app (e.g. tasks saved before urgency
- *  or deadline existed), and renaming the old "waiting" status to "standby". */
+ *  that predates this version of the app, and renaming the old "waiting"
+ *  status to "standby". Finished tasks saved before completedAt existed are
+ *  treated as completed today, so they don't just vanish from view. */
 function loadTasks() {
   const raw = localStorage.getItem(TASKS_KEY);
   if (!raw) return [];
   try {
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed.map((task) => ({
-      ...task,
-      status: task.status === "waiting" ? "standby" : task.status,
-      urgency: task.urgency in URGENCY_LEVELS ? task.urgency : "medium",
-      deadline: task.deadline || null,
-    }));
+    return parsed.map((task) => {
+      const status = task.status === "waiting" ? "standby" : task.status;
+      return {
+        ...task,
+        status,
+        urgency: task.urgency in URGENCY_LEVELS ? task.urgency : "medium",
+        deadline: task.deadline || null,
+        waitingOn: task.waitingOn || "",
+        completedAt: status === "finished" ? task.completedAt || todayISO() : null,
+      };
+    });
   } catch (err) {
     console.error("Couldn't read saved tasks, starting fresh.", err);
     return [];
@@ -116,6 +135,7 @@ let tasks = loadTasks();
 let activeFilter = loadFilter(); // "all" or a category id
 let activeSort = loadSort();
 let manageOpen = false;
+let weekOffset = 0; // 0 = this week, -1 = last week, 1 = next week, ... (not persisted)
 
 // If a task's category was deleted (or predates categories entirely),
 // fall back to the first known category so it still renders sensibly.
@@ -146,17 +166,28 @@ function addTask(text, categoryId, urgency, deadline) {
     categoryId,
     urgency,
     deadline: deadline || null,
+    waitingOn: "",
+    completedAt: null,
   });
   saveTasks(tasks);
   render();
 }
 
-/** Move an existing task to a new column. */
+/** Move an existing task to a new column, stamping/clearing completedAt as it crosses in/out of Finished. */
 function moveTask(id, newStatus) {
   const task = tasks.find((t) => t.id === id);
-  if (task) task.status = newStatus;
+  if (!task) return;
+  task.status = newStatus;
+  task.completedAt = newStatus === "finished" ? todayISO() : null;
+  if (newStatus === "finished") task.waitingOn = "";
   saveTasks(tasks);
   render();
+}
+
+function setWaitingOn(id, value) {
+  const task = tasks.find((t) => t.id === id);
+  if (task) task.waitingOn = value.trim();
+  saveTasks(tasks);
 }
 
 /** Remove a task entirely. */
@@ -202,16 +233,17 @@ function deleteCategory(id) {
 }
 
 // Which button(s) each column's cards should show, and what they do.
+// "Done" isn't here any more — that's the checkbox now (see renderItem).
 const COLUMN_ACTIONS = {
-  todo: [{ label: "Standby →", to: "standby" }, { label: "Done ✓", to: "finished" }],
-  standby: [{ label: "← To do", to: "todo" }, { label: "Done ✓", to: "finished" }],
-  finished: [{ label: "↩ Reopen", to: "todo" }],
+  todo: [{ label: "Standby →", to: "standby" }],
+  standby: [{ label: "← To do", to: "todo" }],
+  finished: [],
 };
 
 const EMPTY_MESSAGES = {
   todo: "Nothing to do — add something above.",
   standby: "Nothing on standby.",
-  finished: "Nothing finished yet.",
+  finished: "Nothing finished this week.",
 };
 
 const STATUSES = ["todo", "standby", "finished"];
@@ -238,11 +270,28 @@ function sortTasks(list, sortMode) {
   return arr;
 }
 
+/** Monday–Sunday range for "today plus N weeks", as both Date objects and ISO strings. */
+function getWeekRange(offset) {
+  const today = new Date();
+  const day = today.getDay(); // 0 = Sunday, 1 = Monday, ...
+  const mondayOffset = (day === 0 ? -6 : 1 - day) + offset * 7;
+
+  const monday = new Date(today);
+  monday.setDate(today.getDate() + mondayOffset);
+  monday.setHours(0, 0, 0, 0);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+
+  const toISO = (d) => d.toISOString().slice(0, 10);
+  return { monday, sunday, mondayISO: toISO(monday), sundayISO: toISO(sunday) };
+}
+
 /** Rebuild everything on screen from the current state. */
 function render() {
   renderCategorySelect();
   renderCategoryFilters();
   renderSortSelect();
+  renderWeekHeader();
   renderBoard();
   renderManagePanel();
 }
@@ -297,15 +346,49 @@ function renderSortSelect() {
   document.getElementById("sort-select").value = activeSort;
 }
 
-/** Rebuild the three columns from `tasks`, honouring the active category filter and sort. */
+/** Show "‹ Week of 17–23 Aug ›  This Week  · 3 finished" in the header. */
+function renderWeekHeader() {
+  const { monday, sunday, mondayISO, sundayISO } = getWeekRange(weekOffset);
+
+  const fmt = (d) => d.toLocaleDateString(undefined, { day: "numeric" });
+  const month = (d) => d.toLocaleDateString(undefined, { month: "short" });
+  const label =
+    month(monday) === month(sunday)
+      ? `Week of ${fmt(monday)}–${fmt(sunday)} ${month(sunday)}`
+      : `Week of ${fmt(monday)} ${month(monday)} – ${fmt(sunday)} ${month(sunday)}`;
+
+  document.getElementById("week-range").textContent = label;
+
+  const todayBtn = document.getElementById("week-today");
+  todayBtn.classList.toggle("hidden", weekOffset === 0);
+
+  const finishedCount = tasks.filter(
+    (t) => t.status === "finished" && t.completedAt >= mondayISO && t.completedAt <= sundayISO
+  ).length;
+  document.getElementById("week-progress").textContent =
+    finishedCount === 0 ? "" : finishedCount === 1 ? "· 1 finished" : `· ${finishedCount} finished`;
+}
+
+/** Rebuild the three columns from `tasks`, honouring the active category filter, sort, and viewed week. */
 function renderBoard() {
+  const { mondayISO, sundayISO } = getWeekRange(weekOffset);
   const filteredTasks =
     activeFilter === "all" ? tasks : tasks.filter((t) => t.categoryId === activeFilter);
 
   for (const status of STATUSES) {
     const container = document.getElementById(`items-${status}`);
     const countEl = document.getElementById(`count-${status}`);
-    const columnTasks = sortTasks(filteredTasks.filter((t) => t.status === status), activeSort);
+
+    let columnTasks = filteredTasks.filter((t) => t.status === status);
+    // To Do and Standby are your live backlog — always shown in full,
+    // regardless of which week you're looking at. Finished is the one
+    // column that's actually scoped to the viewed week.
+    if (status === "finished") {
+      columnTasks = columnTasks.filter(
+        (t) => t.completedAt >= mondayISO && t.completedAt <= sundayISO
+      );
+    }
+    columnTasks = sortTasks(columnTasks, activeSort);
 
     countEl.textContent = columnTasks.length;
     container.innerHTML = "";
@@ -323,8 +406,12 @@ function renderBoard() {
     }
   }
 
+  const liveTotal =
+    (activeFilter === "all" ? tasks : tasks.filter((t) => t.categoryId === activeFilter)).filter(
+      (t) => t.status !== "finished"
+    ).length;
   document.getElementById("task-total").textContent =
-    filteredTasks.length === 1 ? "1 task" : `${filteredTasks.length} tasks`;
+    liveTotal === 1 ? "1 open task" : `${liveTotal} open tasks`;
 }
 
 function formatDeadline(isoDate) {
@@ -342,6 +429,19 @@ function renderItem(task, status) {
   const urgency = URGENCY_LEVELS[task.urgency];
   item.style.borderLeftColor = urgency.color;
   item.style.borderLeftWidth = "4px";
+
+  const row = document.createElement("div");
+  row.className = "item-row";
+
+  const checkbox = document.createElement("input");
+  checkbox.type = "checkbox";
+  checkbox.className = "item-checkbox";
+  checkbox.checked = status === "finished";
+  checkbox.setAttribute("aria-label", status === "finished" ? "Reopen task" : "Mark done");
+  checkbox.addEventListener("change", () => {
+    moveTask(task.id, checkbox.checked ? "finished" : "todo");
+  });
+  row.appendChild(checkbox);
 
   const main = document.createElement("div");
   main.className = "item-main";
@@ -369,7 +469,7 @@ function renderItem(task, status) {
   main.appendChild(text);
 
   if (task.deadline) {
-    const todayStr = new Date().toISOString().slice(0, 10);
+    const todayStr = todayISO();
     const twoDaysStr = new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10);
     const deadlineEl = document.createElement("span");
     deadlineEl.className = "item-deadline";
@@ -382,17 +482,39 @@ function renderItem(task, status) {
     main.appendChild(deadlineEl);
   }
 
-  item.appendChild(main);
+  if (status === "standby") {
+    const waitingLabel = document.createElement("label");
+    waitingLabel.className = "item-waiting";
 
-  const actions = document.createElement("div");
-  actions.className = "item-actions";
+    const waitingInput = document.createElement("input");
+    waitingInput.type = "text";
+    waitingInput.placeholder = "Waiting on...";
+    waitingInput.value = task.waitingOn || "";
+    waitingInput.addEventListener("change", () => setWaitingOn(task.id, waitingInput.value));
+    waitingLabel.appendChild(document.createTextNode("@ "));
+    waitingLabel.appendChild(waitingInput);
+    main.appendChild(waitingLabel);
+  } else if (status === "finished" && task.waitingOn) {
+    // Shouldn't normally happen (waitingOn clears on finish), but keep it
+    // visible rather than silently dropping data if it ever does.
+    const waitingEl = document.createElement("span");
+    waitingEl.className = "item-deadline";
+    waitingEl.textContent = `@ ${task.waitingOn}`;
+    main.appendChild(waitingEl);
+  }
+
+  row.appendChild(main);
+  item.appendChild(row);
+
+  const actionsRow = document.createElement("div");
+  actionsRow.className = "item-actions";
 
   for (const action of COLUMN_ACTIONS[status]) {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.textContent = action.label;
     btn.addEventListener("click", () => moveTask(task.id, action.to));
-    actions.appendChild(btn);
+    actionsRow.appendChild(btn);
   }
 
   const del = document.createElement("button");
@@ -401,9 +523,10 @@ function renderItem(task, status) {
   del.textContent = "✕";
   del.title = "Delete";
   del.addEventListener("click", () => deleteTask(task.id));
-  actions.appendChild(del);
+  actionsRow.appendChild(del);
 
-  item.appendChild(actions);
+  item.appendChild(actionsRow);
+
   return item;
 }
 
@@ -469,28 +592,6 @@ function renderManagePanel() {
   panel.appendChild(addForm);
 }
 
-/** Show "Week of 17–23 Aug" in the header, computed from today's date. */
-function renderWeekRange() {
-  const today = new Date();
-  const day = today.getDay(); // 0 = Sunday, 1 = Monday, ...
-  const mondayOffset = day === 0 ? -6 : 1 - day;
-
-  const monday = new Date(today);
-  monday.setDate(today.getDate() + mondayOffset);
-  const sunday = new Date(monday);
-  sunday.setDate(monday.getDate() + 6);
-
-  const fmt = (d) => d.toLocaleDateString(undefined, { day: "numeric" });
-  const month = (d) => d.toLocaleDateString(undefined, { month: "short" });
-
-  const label =
-    month(monday) === month(sunday)
-      ? `Week of ${fmt(monday)}–${fmt(sunday)} ${month(sunday)}`
-      : `Week of ${fmt(monday)} ${month(monday)} – ${fmt(sunday)} ${month(sunday)}`;
-
-  document.getElementById("week-range").textContent = label;
-}
-
 // --- Wire up the "Add task" form ---
 document.getElementById("add-form").addEventListener("submit", (event) => {
   event.preventDefault(); // stop the page from reloading, which is a <form>'s default behaviour
@@ -519,6 +620,20 @@ document.getElementById("sort-select").addEventListener("change", (event) => {
 document.getElementById("manage-categories-btn").addEventListener("click", () => {
   manageOpen = !manageOpen;
   renderManagePanel();
+});
+
+// --- Wire up week navigation ---
+document.getElementById("week-prev").addEventListener("click", () => {
+  weekOffset -= 1;
+  render();
+});
+document.getElementById("week-next").addEventListener("click", () => {
+  weekOffset += 1;
+  render();
+});
+document.getElementById("week-today").addEventListener("click", () => {
+  weekOffset = 0;
+  render();
 });
 
 // ---------------------------------------------------------------
@@ -568,7 +683,6 @@ menuToggle.addEventListener("click", () => {
 sidebarOverlay.addEventListener("click", closeSidebar);
 
 // --- Initial paint ---
-renderWeekRange();
 render();
 showSection(currentSection());
 

@@ -62,7 +62,13 @@
         <div class="wrap">
           <header>
             <h1>This Week</h1>
-            <span id="week-range" class="week-range"></span>
+            <div class="week-nav">
+              <button id="week-prev" type="button" class="week-nav-btn" aria-label="Previous week">‹</button>
+              <span id="week-range" class="week-range"></span>
+              <button id="week-next" type="button" class="week-nav-btn" aria-label="Next week">›</button>
+              <button id="week-today" type="button" class="week-today-btn">This Week</button>
+              <span id="week-progress" class="week-progress"></span>
+            </div>
           </header>
 
           <!-- The form used to add a new task. It always adds to the "To Do" column. -->

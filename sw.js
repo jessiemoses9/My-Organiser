@@ -4,7 +4,7 @@
 //
 // Bump CACHE_NAME (e.g. to "organiser-v2") any time you change the
 // files below and want visitors to pick up the new version.
-const CACHE_NAME = "organiser-v5";
+const CACHE_NAME = "organiser-v6";
 const FILES_TO_CACHE = [
   "./",
   "./index.html",
