@@ -4,13 +4,13 @@
   <meta charset="UTF-8" />
   <!-- viewport-fit=cover lets the app draw edge-to-edge on phones with a notch -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Organiser</title>
+  <title>Jessie's Plan</title>
 
   <!-- These three meta/link tags are what let the app be "Added to Home Screen"
        on a phone and behave like a real app (no browser bar, its own icon). -->
   <meta name="theme-color" content="#8f3430" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-title" content="Organiser" />
+  <meta name="apple-mobile-web-app-title" content="Jessie's Plan" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
   <link rel="icon" href="icons/icon-192.png" />
   <link rel="manifest" href="manifest.json" />
@@ -33,14 +33,25 @@
     <nav id="sidebar" class="sidebar">
       <div class="sidebar-brand">
         <span class="sidebar-brand-mark">✦</span>
-        <span class="sidebar-brand-text">Jessie's Universe</span>
+        <span class="sidebar-brand-text">Jessie's Plan</span>
       </div>
-      <ul class="nav-list">
-        <li><a href="#todo" class="nav-link" data-section="todo"><span class="nav-icon">📅</span>This Week</a></li>
-        <li><a href="#notes" class="nav-link" data-section="notes"><span class="nav-icon">📓</span>Notes</a></li>
-        <li><a href="#wishlist" class="nav-link" data-section="wishlist"><span class="nav-icon">🎁</span>Wishlist</a></li>
-        <li><a href="#quotes" class="nav-link" data-section="quotes"><span class="nav-icon">✨</span>Quotes</a></li>
-      </ul>
+
+      <div class="nav-group">
+        <div class="nav-group-label">Work</div>
+        <ul class="nav-list">
+          <li><a href="#todo" class="nav-link" data-section="todo"><span class="nav-icon">📅</span>This Week</a></li>
+          <li><a href="#work-notes" class="nav-link" data-section="work-notes"><span class="nav-icon">📓</span>My Notes</a></li>
+        </ul>
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-group-label">Personal</div>
+        <ul class="nav-list">
+          <li><a href="#personal-notes" class="nav-link" data-section="personal-notes"><span class="nav-icon">📔</span>Notes</a></li>
+          <li><a href="#future-me" class="nav-link" data-section="future-me"><span class="nav-icon">🌠</span>Future Me</a></li>
+          <li><a href="#travel" class="nav-link" data-section="travel"><span class="nav-icon">✈️</span>Travel</a></li>
+        </ul>
+      </div>
     </nav>
 
     <!-- Only one of these <section class="view"> blocks is visible at a
@@ -101,24 +112,31 @@
         </div>
       </section>
 
-      <section id="view-notes" class="view" data-section="notes">
+      <section id="view-work-notes" class="view" data-section="work-notes">
         <div class="placeholder-card">
-          <h2>📓 Notes</h2>
-          <p>Your idea hub and meeting-notes space — built next, whenever you're ready for it.</p>
+          <h2>📓 My Notes</h2>
+          <p>Meeting notes, plus general notes on Kylie Cosmetics and Burberry — built next, whenever you're ready for it.</p>
         </div>
       </section>
 
-      <section id="view-wishlist" class="view" data-section="wishlist">
+      <section id="view-personal-notes" class="view" data-section="personal-notes">
         <div class="placeholder-card">
-          <h2>🎁 Wishlist</h2>
-          <p>A place to save things you're eyeing up — coming soon.</p>
+          <h2>📔 Notes</h2>
+          <p>Your personal idea hub — coming soon.</p>
         </div>
       </section>
 
-      <section id="view-quotes" class="view" data-section="quotes">
+      <section id="view-future-me" class="view" data-section="future-me">
         <div class="placeholder-card">
-          <h2>✨ Quotes</h2>
-          <p>A little collection of things that inspire you — coming soon.</p>
+          <h2>🌠 Future Me</h2>
+          <p>A place to dream big and plan your life — coming soon.</p>
+        </div>
+      </section>
+
+      <section id="view-travel" class="view" data-section="travel">
+        <div class="placeholder-card">
+          <h2>✈️ Travel</h2>
+          <p>Save your flights and hotels, with one-tap adding to your iPhone calendar — coming soon.</p>
         </div>
       </section>
 

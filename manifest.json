@@ -1,7 +1,7 @@
 {
-  "name": "Organiser",
-  "short_name": "Organiser",
-  "description": "Jessie's weekly To Do / Waiting On / Finished board",
+  "name": "Jessie's Plan",
+  "short_name": "Jessie's Plan",
+  "description": "Jessie's personal organiser: weekly work agenda, notes, and more",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

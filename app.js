@@ -176,7 +176,7 @@ document.getElementById("add-form").addEventListener("submit", (event) => {
 // sharing a link keeps you on the same page.
 // ---------------------------------------------------------------
 
-const SECTIONS = ["todo", "notes", "wishlist", "quotes"];
+const SECTIONS = ["todo", "work-notes", "personal-notes", "future-me", "travel"];
 
 function currentSection() {
   const hash = location.hash.replace("#", "");
