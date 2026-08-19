@@ -22,56 +22,107 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <div class="wrap">
-    <header>
-      <h1>Jessie's Plan</h1>
-      <span id="week-range" class="week-range"></span>
-    </header>
+  <div class="app">
+    <!-- Hamburger button, only shown on narrow screens (see styles.css). -->
+    <button id="menu-toggle" class="menu-toggle" type="button" aria-label="Open menu">☰</button>
+    <div id="sidebar-overlay" class="sidebar-overlay"></div>
 
-    <!-- The form used to add a new task. It always adds to the "To Do" column. -->
-    <form id="add-form" class="add-form">
-      <input
-        id="add-input"
-        type="text"
-        placeholder="Add a task..."
-        autocomplete="off"
-        required
-      />
-      <button type="submit">Add</button>
-    </form>
+    <!-- The sidebar is the one thing present on every section: it's what
+         makes this feel like one app with several rooms, not four
+         unrelated pages. -->
+    <nav id="sidebar" class="sidebar">
+      <div class="sidebar-brand">
+        <span class="sidebar-brand-mark">✦</span>
+        <span class="sidebar-brand-text">Jessie's Universe</span>
+      </div>
+      <ul class="nav-list">
+        <li><a href="#todo" class="nav-link" data-section="todo"><span class="nav-icon">📅</span>This Week</a></li>
+        <li><a href="#notes" class="nav-link" data-section="notes"><span class="nav-icon">📓</span>Notes</a></li>
+        <li><a href="#wishlist" class="nav-link" data-section="wishlist"><span class="nav-icon">🎁</span>Wishlist</a></li>
+        <li><a href="#quotes" class="nav-link" data-section="quotes"><span class="nav-icon">✨</span>Quotes</a></li>
+      </ul>
+    </nav>
 
-    <main class="board">
-      <section class="column" data-status="todo">
-        <div class="column-header">
-          <span class="dot todo"></span>
-          To Do
-          <span class="count" id="count-todo">0</span>
+    <!-- Only one of these <section class="view"> blocks is visible at a
+         time — app.js toggles the "active" class based on the URL hash. -->
+    <main id="content" class="content">
+
+      <section id="view-todo" class="view" data-section="todo">
+        <div class="wrap">
+          <header>
+            <h1>This Week</h1>
+            <span id="week-range" class="week-range"></span>
+          </header>
+
+          <!-- The form used to add a new task. It always adds to the "To Do" column. -->
+          <form id="add-form" class="add-form">
+            <input
+              id="add-input"
+              type="text"
+              placeholder="Add a task..."
+              autocomplete="off"
+              required
+            />
+            <button type="submit">Add</button>
+          </form>
+
+          <div class="board">
+            <section class="column" data-status="todo">
+              <div class="column-header">
+                <span class="dot todo"></span>
+                To Do
+                <span class="count" id="count-todo">0</span>
+              </div>
+              <div class="items" id="items-todo"></div>
+            </section>
+
+            <section class="column" data-status="waiting">
+              <div class="column-header">
+                <span class="dot waiting"></span>
+                Waiting On
+                <span class="count" id="count-waiting">0</span>
+              </div>
+              <div class="items" id="items-waiting"></div>
+            </section>
+
+            <section class="column" data-status="finished">
+              <div class="column-header">
+                <span class="dot finished"></span>
+                Finished
+                <span class="count" id="count-finished">0</span>
+              </div>
+              <div class="items" id="items-finished"></div>
+            </section>
+          </div>
+
+          <footer>
+            Saved on this device only &middot; <span id="task-total"></span>
+          </footer>
         </div>
-        <div class="items" id="items-todo"></div>
       </section>
 
-      <section class="column" data-status="waiting">
-        <div class="column-header">
-          <span class="dot waiting"></span>
-          Waiting On
-          <span class="count" id="count-waiting">0</span>
+      <section id="view-notes" class="view" data-section="notes">
+        <div class="placeholder-card">
+          <h2>📓 Notes</h2>
+          <p>Your idea hub and meeting-notes space — built next, whenever you're ready for it.</p>
         </div>
-        <div class="items" id="items-waiting"></div>
       </section>
 
-      <section class="column" data-status="finished">
-        <div class="column-header">
-          <span class="dot finished"></span>
-          Finished
-          <span class="count" id="count-finished">0</span>
+      <section id="view-wishlist" class="view" data-section="wishlist">
+        <div class="placeholder-card">
+          <h2>🎁 Wishlist</h2>
+          <p>A place to save things you're eyeing up — coming soon.</p>
         </div>
-        <div class="items" id="items-finished"></div>
       </section>
+
+      <section id="view-quotes" class="view" data-section="quotes">
+        <div class="placeholder-card">
+          <h2>✨ Quotes</h2>
+          <p>A little collection of things that inspire you — coming soon.</p>
+        </div>
+      </section>
+
     </main>
-
-    <footer>
-      Saved on this device only &middot; <span id="task-total"></span>
-    </footer>
   </div>
 
   <!-- type="module" just means app.js can use modern JS import syntax if you

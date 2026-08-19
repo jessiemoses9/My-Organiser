@@ -169,9 +169,56 @@ document.getElementById("add-form").addEventListener("submit", (event) => {
   input.focus();
 });
 
+// ---------------------------------------------------------------
+// App shell: sidebar navigation between sections (This Week, Notes,
+// Wishlist, Quotes) and the mobile slide-out drawer. Which section is
+// "current" lives in the URL hash (e.g. #notes), so refreshing or
+// sharing a link keeps you on the same page.
+// ---------------------------------------------------------------
+
+const SECTIONS = ["todo", "notes", "wishlist", "quotes"];
+
+function currentSection() {
+  const hash = location.hash.replace("#", "");
+  return SECTIONS.includes(hash) ? hash : "todo";
+}
+
+function showSection(section) {
+  for (const id of SECTIONS) {
+    document.getElementById(`view-${id}`).classList.toggle("active", id === section);
+  }
+  for (const link of document.querySelectorAll(".nav-link")) {
+    link.classList.toggle("active", link.dataset.section === section);
+  }
+  closeSidebar();
+}
+
+window.addEventListener("hashchange", () => showSection(currentSection()));
+
+// --- Mobile sidebar drawer ---
+const sidebar = document.getElementById("sidebar");
+const sidebarOverlay = document.getElementById("sidebar-overlay");
+const menuToggle = document.getElementById("menu-toggle");
+
+function openSidebar() {
+  sidebar.classList.add("open");
+  sidebarOverlay.classList.add("open");
+}
+
+function closeSidebar() {
+  sidebar.classList.remove("open");
+  sidebarOverlay.classList.remove("open");
+}
+
+menuToggle.addEventListener("click", () => {
+  sidebar.classList.contains("open") ? closeSidebar() : openSidebar();
+});
+sidebarOverlay.addEventListener("click", closeSidebar);
+
 // --- Initial paint ---
 renderWeekRange();
 render();
+showSection(currentSection());
 
 // --- PWA: register the service worker so the app can be installed
 // and still load (from cache) with no internet connection. This is
