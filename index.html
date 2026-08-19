@@ -132,6 +132,61 @@
             Saved on this device only &middot; <span id="task-total"></span>
           </footer>
         </div>
+
+        <!-- Task detail modal: click any task card to open it here. Every
+             field saves itself immediately on change, so there's no
+             separate Save step — just Close when you're done. -->
+        <div id="task-modal" class="modal-overlay hidden">
+          <div class="modal" role="dialog" aria-modal="true" aria-label="Task details">
+            <div class="modal-header">
+              <input id="modal-title" class="modal-title-input" type="text" aria-label="Task name" />
+              <button id="modal-close" type="button" class="modal-close" aria-label="Close">✕</button>
+            </div>
+
+            <div id="modal-status-tabs" class="modal-status-tabs"></div>
+
+            <div class="modal-body">
+              <div class="modal-field">
+                <label>Deadline</label>
+                <input id="modal-deadline" type="date" class="select-input" />
+              </div>
+
+              <div class="modal-field">
+                <label>Priority</label>
+                <div id="modal-priority" class="modal-pill-group"></div>
+              </div>
+
+              <div class="modal-field">
+                <label>Category</label>
+                <select id="modal-category" class="select-input"></select>
+              </div>
+
+              <div id="modal-waiting-field" class="modal-field">
+                <label>Waiting on</label>
+                <input id="modal-waiting" type="text" class="select-input" placeholder="Who are you waiting on?" />
+              </div>
+
+              <div class="modal-field">
+                <label>Checklist</label>
+                <div id="modal-checklist" class="modal-checklist"></div>
+                <form id="modal-checklist-form" class="modal-checklist-form">
+                  <input id="modal-checklist-input" type="text" placeholder="Add item..." autocomplete="off" />
+                  <button type="submit">Add</button>
+                </form>
+              </div>
+
+              <div class="modal-field">
+                <label>Notes</label>
+                <textarea id="modal-notes" rows="4" placeholder="Add notes, links, or context..."></textarea>
+              </div>
+            </div>
+
+            <div class="modal-footer">
+              <button id="modal-delete" type="button" class="modal-delete">Delete task</button>
+              <button id="modal-done" type="button" class="week-today-btn">Close</button>
+            </div>
+          </div>
+        </div>
       </section>
 
       <section id="view-work-notes" class="view" data-section="work-notes">

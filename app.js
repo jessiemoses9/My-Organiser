@@ -41,11 +41,12 @@ const DEFAULT_CATEGORIES = [
 ];
 
 // Urgency is fixed (not user-editable like categories) so its colours
-// can reuse the theme's existing red/amber/green palette.
+// can reuse the theme's existing palette.
 const URGENCY_LEVELS = {
-  high: { label: "High", color: "var(--danger)", rank: 0 },
-  medium: { label: "Medium", color: "var(--amber)", rank: 1 },
-  low: { label: "Low", color: "var(--finished)", rank: 2 },
+  urgent: { label: "Urgent", color: "var(--urgent)", rank: 0 },
+  high: { label: "High", color: "var(--high)", rank: 1 },
+  medium: { label: "Medium", color: "var(--amber)", rank: 2 },
+  low: { label: "Low", color: "var(--finished)", rank: 3 },
 };
 
 const SORT_LABELS = {
@@ -100,6 +101,8 @@ function loadTasks() {
         deadline: task.deadline || null,
         waitingOn: task.waitingOn || "",
         completedAt: status === "finished" ? task.completedAt || todayISO() : null,
+        notes: task.notes || "",
+        checklist: Array.isArray(task.checklist) ? task.checklist : [],
       };
     });
   } catch (err) {
@@ -136,7 +139,7 @@ let activeFilter = loadFilter(); // "all" or a category id
 let activeSort = loadSort();
 let manageOpen = false;
 let weekOffset = 0; // 0 = this week, -1 = last week, 1 = next week, ... (not persisted)
-let openDetailIds = new Set(); // which task cards have their Details panel expanded
+let openTaskId = null; // which task's detail modal is currently open, if any
 
 // If a task's category was deleted (or predates categories entirely),
 // fall back to the first known category so it still renders sensibly.
@@ -169,6 +172,8 @@ function addTask(text, categoryId, urgency, deadline) {
     deadline: deadline || null,
     waitingOn: "",
     completedAt: null,
+    notes: "",
+    checklist: [],
   });
   saveTasks(tasks);
   render();
@@ -185,17 +190,38 @@ function moveTask(id, newStatus) {
   render();
 }
 
-function setWaitingOn(id, value) {
-  const task = tasks.find((t) => t.id === id);
-  if (task) task.waitingOn = value.trim();
-  saveTasks(tasks);
-}
-
-/** Patch arbitrary fields on a task (used by the per-card Details panel). */
+/** Patch arbitrary fields on a task (used by the task detail modal). */
 function updateTask(id, patch) {
   const task = tasks.find((t) => t.id === id);
   if (!task) return;
   Object.assign(task, patch);
+  saveTasks(tasks);
+  render();
+}
+
+function addChecklistItem(taskId, text) {
+  const trimmed = text.trim();
+  if (!trimmed) return;
+  const task = tasks.find((t) => t.id === taskId);
+  if (!task) return;
+  task.checklist.push({ id: makeId(), text: trimmed, done: false });
+  saveTasks(tasks);
+  render();
+}
+
+function toggleChecklistItem(taskId, itemId) {
+  const task = tasks.find((t) => t.id === taskId);
+  const item = task?.checklist.find((c) => c.id === itemId);
+  if (!item) return;
+  item.done = !item.done;
+  saveTasks(tasks);
+  render();
+}
+
+function deleteChecklistItem(taskId, itemId) {
+  const task = tasks.find((t) => t.id === taskId);
+  if (!task) return;
+  task.checklist = task.checklist.filter((c) => c.id !== itemId);
   saveTasks(tasks);
   render();
 }
@@ -304,21 +330,28 @@ function render() {
   renderWeekHeader();
   renderBoard();
   renderManagePanel();
+  renderModal();
+}
+
+/** Populate a <select> with the current categories, keeping the given id selected if possible. */
+function populateCategorySelect(select, selectedId) {
+  select.innerHTML = "";
+  for (const category of categories) {
+    const option = document.createElement("option");
+    option.value = category.id;
+    option.textContent = category.name;
+    option.selected = category.id === selectedId;
+    select.appendChild(option);
+  }
 }
 
 /** Populate the "add task" form's category dropdown. */
 function renderCategorySelect() {
   const select = document.getElementById("add-category");
   const previous = select.value;
-  select.innerHTML = "";
-  for (const category of categories) {
-    const option = document.createElement("option");
-    option.value = category.id;
-    option.textContent = category.name;
-    select.appendChild(option);
-  }
   // Keep whatever was selected if it still exists, otherwise default to the first category.
-  select.value = categories.some((c) => c.id === previous) ? previous : categories[0]?.id ?? "";
+  const target = categories.some((c) => c.id === previous) ? previous : categories[0]?.id ?? "";
+  populateCategorySelect(select, target);
 }
 
 /** Rebuild the "All / Burberry / Kylie / ..." filter pills. */
@@ -453,8 +486,11 @@ function renderItem(task, status) {
   });
   row.appendChild(checkbox);
 
-  const main = document.createElement("div");
-  main.className = "item-main";
+  const main = document.createElement("button");
+  main.type = "button";
+  main.className = "item-main clickable";
+  main.setAttribute("aria-label", `Open details for "${task.text}"`);
+  main.addEventListener("click", () => openModal(task.id));
 
   const meta = document.createElement("div");
   meta.className = "item-meta";
@@ -492,25 +528,19 @@ function renderItem(task, status) {
     main.appendChild(deadlineEl);
   }
 
-  if (status === "standby") {
-    const waitingLabel = document.createElement("label");
-    waitingLabel.className = "item-waiting";
-
-    const waitingInput = document.createElement("input");
-    waitingInput.type = "text";
-    waitingInput.placeholder = "Waiting on...";
-    waitingInput.value = task.waitingOn || "";
-    waitingInput.addEventListener("change", () => setWaitingOn(task.id, waitingInput.value));
-    waitingLabel.appendChild(document.createTextNode("@ "));
-    waitingLabel.appendChild(waitingInput);
-    main.appendChild(waitingLabel);
-  } else if (status === "finished" && task.waitingOn) {
-    // Shouldn't normally happen (waitingOn clears on finish), but keep it
-    // visible rather than silently dropping data if it ever does.
+  if (status === "standby" && task.waitingOn) {
     const waitingEl = document.createElement("span");
-    waitingEl.className = "item-deadline";
+    waitingEl.className = "item-waiting";
     waitingEl.textContent = `@ ${task.waitingOn}`;
     main.appendChild(waitingEl);
+  }
+
+  if (task.checklist.length > 0) {
+    const done = task.checklist.filter((c) => c.done).length;
+    const progressEl = document.createElement("span");
+    progressEl.className = "item-checklist-progress";
+    progressEl.textContent = `✓ ${done}/${task.checklist.length}`;
+    main.appendChild(progressEl);
   }
 
   row.appendChild(main);
@@ -527,20 +557,6 @@ function renderItem(task, status) {
     actionsRow.appendChild(btn);
   }
 
-  const isOpen = openDetailIds.has(task.id);
-  const detailsToggle = document.createElement("button");
-  detailsToggle.type = "button";
-  detailsToggle.textContent = isOpen ? "Hide details" : "Details";
-  detailsToggle.addEventListener("click", () => {
-    if (isOpen) {
-      openDetailIds.delete(task.id);
-    } else {
-      openDetailIds.add(task.id);
-    }
-    render();
-  });
-  actionsRow.appendChild(detailsToggle);
-
   const del = document.createElement("button");
   del.type = "button";
   del.className = "delete";
@@ -551,44 +567,7 @@ function renderItem(task, status) {
 
   item.appendChild(actionsRow);
 
-  if (isOpen) {
-    item.appendChild(renderDetailsPanel(task));
-  }
-
   return item;
-}
-
-/** The expandable "Details" panel where urgency and deadline are set per task. */
-function renderDetailsPanel(task) {
-  const panel = document.createElement("div");
-  panel.className = "item-details";
-
-  const urgencyLabel = document.createElement("label");
-  urgencyLabel.textContent = "Urgency";
-  const urgencySelect = document.createElement("select");
-  for (const [id, level] of Object.entries(URGENCY_LEVELS)) {
-    const option = document.createElement("option");
-    option.value = id;
-    option.textContent = level.label;
-    option.selected = task.urgency === id;
-    urgencySelect.appendChild(option);
-  }
-  urgencySelect.addEventListener("change", () => updateTask(task.id, { urgency: urgencySelect.value }));
-  urgencyLabel.appendChild(urgencySelect);
-  panel.appendChild(urgencyLabel);
-
-  const deadlineLabel = document.createElement("label");
-  deadlineLabel.textContent = "Deadline";
-  const deadlineInput = document.createElement("input");
-  deadlineInput.type = "date";
-  deadlineInput.value = task.deadline || "";
-  deadlineInput.addEventListener("change", () =>
-    updateTask(task.id, { deadline: deadlineInput.value || null })
-  );
-  deadlineLabel.appendChild(deadlineInput);
-  panel.appendChild(deadlineLabel);
-
-  return panel;
 }
 
 /** Rebuild the "Manage categories" panel (rename / delete / add), if open. */
@@ -652,6 +631,134 @@ function renderManagePanel() {
 
   panel.appendChild(addForm);
 }
+
+// ---------------------------------------------------------------
+// Task detail modal — opened by clicking any task card. Every field
+// commits immediately (there's no separate Save step), so renderModal()
+// just needs to reflect whatever `openTaskId` currently points at.
+// ---------------------------------------------------------------
+
+function openModal(id) {
+  openTaskId = id;
+  render();
+}
+
+function closeModal() {
+  openTaskId = null;
+  render();
+}
+
+const STATUS_LABELS = { todo: "To Do", standby: "Standby", finished: "Finished" };
+
+function renderModal() {
+  const overlay = document.getElementById("task-modal");
+  const task = openTaskId ? tasks.find((t) => t.id === openTaskId) : null;
+
+  if (!task) {
+    overlay.classList.add("hidden");
+    return;
+  }
+  overlay.classList.remove("hidden");
+
+  document.getElementById("modal-title").value = task.text;
+
+  const tabs = document.getElementById("modal-status-tabs");
+  tabs.innerHTML = "";
+  for (const status of STATUSES) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.textContent = STATUS_LABELS[status];
+    btn.className = status === task.status ? "active" : "";
+    btn.addEventListener("click", () => moveTask(task.id, status));
+    tabs.appendChild(btn);
+  }
+
+  document.getElementById("modal-deadline").value = task.deadline || "";
+
+  const priorityGroup = document.getElementById("modal-priority");
+  priorityGroup.innerHTML = "";
+  for (const [id, level] of Object.entries(URGENCY_LEVELS)) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.textContent = level.label;
+    btn.className = id === task.urgency ? "active" : "";
+    btn.style.setProperty("--pill-color", level.color);
+    btn.addEventListener("click", () => updateTask(task.id, { urgency: id }));
+    priorityGroup.appendChild(btn);
+  }
+
+  populateCategorySelect(document.getElementById("modal-category"), task.categoryId);
+
+  const waitingField = document.getElementById("modal-waiting-field");
+  waitingField.classList.toggle("hidden", task.status !== "standby");
+  document.getElementById("modal-waiting").value = task.waitingOn || "";
+
+  const checklistEl = document.getElementById("modal-checklist");
+  checklistEl.innerHTML = "";
+  for (const item of task.checklist) {
+    const row = document.createElement("div");
+    row.className = "modal-checklist-item" + (item.done ? " done" : "");
+
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.checked = item.done;
+    checkbox.addEventListener("change", () => toggleChecklistItem(task.id, item.id));
+    row.appendChild(checkbox);
+
+    const label = document.createElement("span");
+    label.textContent = item.text;
+    row.appendChild(label);
+
+    const del = document.createElement("button");
+    del.type = "button";
+    del.textContent = "✕";
+    del.addEventListener("click", () => deleteChecklistItem(task.id, item.id));
+    row.appendChild(del);
+
+    checklistEl.appendChild(row);
+  }
+
+  document.getElementById("modal-notes").value = task.notes || "";
+}
+
+document.getElementById("modal-title").addEventListener("change", (event) => {
+  if (openTaskId && event.target.value.trim()) {
+    updateTask(openTaskId, { text: event.target.value.trim() });
+  }
+});
+document.getElementById("modal-deadline").addEventListener("change", (event) => {
+  if (openTaskId) updateTask(openTaskId, { deadline: event.target.value || null });
+});
+document.getElementById("modal-category").addEventListener("change", (event) => {
+  if (openTaskId) updateTask(openTaskId, { categoryId: event.target.value });
+});
+document.getElementById("modal-waiting").addEventListener("change", (event) => {
+  if (openTaskId) updateTask(openTaskId, { waitingOn: event.target.value.trim() });
+});
+document.getElementById("modal-notes").addEventListener("change", (event) => {
+  if (openTaskId) updateTask(openTaskId, { notes: event.target.value });
+});
+document.getElementById("modal-checklist-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const input = document.getElementById("modal-checklist-input");
+  if (openTaskId && input.value.trim()) {
+    addChecklistItem(openTaskId, input.value);
+    input.value = "";
+    input.focus();
+  }
+});
+document.getElementById("modal-delete").addEventListener("click", () => {
+  if (openTaskId) {
+    const id = openTaskId;
+    closeModal();
+    deleteTask(id);
+  }
+});
+document.getElementById("modal-close").addEventListener("click", closeModal);
+document.getElementById("modal-done").addEventListener("click", closeModal);
+document.getElementById("task-modal").addEventListener("click", (event) => {
+  if (event.target.id === "task-modal") closeModal();
+});
 
 // --- Wire up the "Add task" form ---
 // Urgency and deadline aren't collected here any more — new tasks start

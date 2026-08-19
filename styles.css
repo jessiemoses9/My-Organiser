@@ -15,8 +15,10 @@
   --standby: #c98fa0;
   --finished: #7fa583;
   --accent: #8f3430;      /* the "Add" button */
-  --danger: #e0616b;      /* also used for "high" urgency and overdue dates */
-  --amber: #c9a13f;       /* "medium" urgency and "due soon" dates */
+  --danger: #e0616b;      /* overdue dates */
+  --urgent: #a83246;      /* "urgent" priority — deepest, most alarming */
+  --high: #d98a3d;        /* "high" priority */
+  --amber: #c9a13f;       /* "medium" priority and "due soon" dates */
   --radius: 10px;
 }
 
@@ -551,64 +553,26 @@ h1 {
   min-width: 0;
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: 4px;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  text-align: left;
+  color: inherit;
 }
 
-.item-waiting {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
+.item-waiting,
+.item-checklist-progress {
   font-size: 12px;
   color: var(--ink-soft);
   width: fit-content;
 }
 
-.item-waiting input {
-  background: transparent;
-  border: none;
-  border-bottom: 1px dashed var(--border);
-  color: var(--ink);
-  font-size: 12px;
-  padding: 1px 2px;
-  width: 110px;
-}
-
-.item-waiting input:focus {
-  outline: none;
-  border-bottom-color: var(--ink-soft);
-}
-
-.item-waiting input::placeholder { color: var(--ink-soft); }
-
-.item-details {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 2px;
-  padding-top: 8px;
-  border-top: 1px dashed var(--border);
-}
-
-.item-details label {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--ink-soft);
-}
-
-.item-details select,
-.item-details input[type="date"] {
-  background: var(--card-bg);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 4px 6px;
-  font-size: 12px;
-  color: var(--ink);
-}
+.item-main.clickable { cursor: pointer; }
+.item-main.clickable:hover .item-text { text-decoration: underline; text-decoration-color: var(--border); }
 
 .item-meta {
   display: flex;
@@ -671,3 +635,225 @@ footer {
   color: var(--ink-soft);
   text-align: center;
 }
+
+/* ---------------------------------------------------------------
+   Task detail modal — opened by clicking a task card. Every field
+   saves itself the moment it changes, so there's no Save/Cancel
+   split state to manage, just a Close button.
+   ------------------------------------------------------------- */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(40, 20, 18, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 50;
+}
+
+.modal-overlay.hidden { display: none; }
+
+.modal {
+  background: var(--card-bg);
+  border-radius: 14px;
+  width: 100%;
+  max-width: 480px;
+  max-height: min(680px, 90vh);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 12px 40px rgba(74, 47, 43, 0.3);
+}
+
+.modal-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 18px 18px 0;
+}
+
+.modal-title-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--title);
+  padding: 4px 2px;
+}
+
+.modal-title-input:focus { outline: none; border-bottom: 1px solid var(--border); }
+
+.modal-close {
+  background: transparent;
+  border: none;
+  color: var(--ink-soft);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px 6px;
+  flex-shrink: 0;
+}
+
+.modal-close:hover { color: var(--ink); }
+
+.modal-status-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 14px 18px 0;
+}
+
+.modal-status-tabs button {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--ink-soft);
+  border-radius: 999px;
+  padding: 6px 13px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.modal-status-tabs button.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #ffffff;
+}
+
+.modal-body {
+  padding: 16px 18px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.modal-field { display: flex; flex-direction: column; gap: 6px; }
+
+.modal-field label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-soft);
+}
+
+.modal-field.hidden { display: none; }
+
+.modal-field textarea {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: var(--ink);
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.modal-pill-group { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.modal-pill-group button {
+  --pill-color: var(--ink-soft);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--ink-soft);
+  border-radius: 999px;
+  padding: 5px 13px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.modal-pill-group button.active {
+  background: var(--pill-color);
+  border-color: var(--pill-color);
+  color: #ffffff;
+}
+
+.modal-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.modal-checklist-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.modal-checklist-item input[type="checkbox"] {
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.modal-checklist-item span {
+  flex: 1;
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.modal-checklist-item.done span {
+  text-decoration: line-through;
+  color: var(--ink-soft);
+}
+
+.modal-checklist-item button {
+  background: transparent;
+  border: none;
+  color: var(--ink-soft);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 2px 6px;
+}
+
+.modal-checklist-item button:hover { color: var(--danger); }
+
+.modal-checklist-form {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.modal-checklist-form input {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.modal-checklist-form button {
+  background: var(--accent);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 18px;
+  border-top: 1px solid var(--border);
+}
+
+.modal-delete {
+  background: transparent;
+  border: none;
+  color: var(--danger);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 6px 4px;
+}
+
+.modal-delete:hover { text-decoration: underline; }
