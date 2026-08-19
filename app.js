@@ -136,6 +136,7 @@ let activeFilter = loadFilter(); // "all" or a category id
 let activeSort = loadSort();
 let manageOpen = false;
 let weekOffset = 0; // 0 = this week, -1 = last week, 1 = next week, ... (not persisted)
+let openDetailIds = new Set(); // which task cards have their Details panel expanded
 
 // If a task's category was deleted (or predates categories entirely),
 // fall back to the first known category so it still renders sensibly.
@@ -188,6 +189,15 @@ function setWaitingOn(id, value) {
   const task = tasks.find((t) => t.id === id);
   if (task) task.waitingOn = value.trim();
   saveTasks(tasks);
+}
+
+/** Patch arbitrary fields on a task (used by the per-card Details panel). */
+function updateTask(id, patch) {
+  const task = tasks.find((t) => t.id === id);
+  if (!task) return;
+  Object.assign(task, patch);
+  saveTasks(tasks);
+  render();
 }
 
 /** Remove a task entirely. */
@@ -517,6 +527,20 @@ function renderItem(task, status) {
     actionsRow.appendChild(btn);
   }
 
+  const isOpen = openDetailIds.has(task.id);
+  const detailsToggle = document.createElement("button");
+  detailsToggle.type = "button";
+  detailsToggle.textContent = isOpen ? "Hide details" : "Details";
+  detailsToggle.addEventListener("click", () => {
+    if (isOpen) {
+      openDetailIds.delete(task.id);
+    } else {
+      openDetailIds.add(task.id);
+    }
+    render();
+  });
+  actionsRow.appendChild(detailsToggle);
+
   const del = document.createElement("button");
   del.type = "button";
   del.className = "delete";
@@ -527,7 +551,44 @@ function renderItem(task, status) {
 
   item.appendChild(actionsRow);
 
+  if (isOpen) {
+    item.appendChild(renderDetailsPanel(task));
+  }
+
   return item;
+}
+
+/** The expandable "Details" panel where urgency and deadline are set per task. */
+function renderDetailsPanel(task) {
+  const panel = document.createElement("div");
+  panel.className = "item-details";
+
+  const urgencyLabel = document.createElement("label");
+  urgencyLabel.textContent = "Urgency";
+  const urgencySelect = document.createElement("select");
+  for (const [id, level] of Object.entries(URGENCY_LEVELS)) {
+    const option = document.createElement("option");
+    option.value = id;
+    option.textContent = level.label;
+    option.selected = task.urgency === id;
+    urgencySelect.appendChild(option);
+  }
+  urgencySelect.addEventListener("change", () => updateTask(task.id, { urgency: urgencySelect.value }));
+  urgencyLabel.appendChild(urgencySelect);
+  panel.appendChild(urgencyLabel);
+
+  const deadlineLabel = document.createElement("label");
+  deadlineLabel.textContent = "Deadline";
+  const deadlineInput = document.createElement("input");
+  deadlineInput.type = "date";
+  deadlineInput.value = task.deadline || "";
+  deadlineInput.addEventListener("change", () =>
+    updateTask(task.id, { deadline: deadlineInput.value || null })
+  );
+  deadlineLabel.appendChild(deadlineInput);
+  panel.appendChild(deadlineLabel);
+
+  return panel;
 }
 
 /** Rebuild the "Manage categories" panel (rename / delete / add), if open. */
@@ -593,19 +654,17 @@ function renderManagePanel() {
 }
 
 // --- Wire up the "Add task" form ---
+// Urgency and deadline aren't collected here any more — new tasks start
+// as medium/no-deadline, and can be set via each card's "Details" toggle.
 document.getElementById("add-form").addEventListener("submit", (event) => {
   event.preventDefault(); // stop the page from reloading, which is a <form>'s default behaviour
   const input = document.getElementById("add-input");
   const categorySelect = document.getElementById("add-category");
-  const urgencySelect = document.getElementById("add-urgency");
-  const deadlineInput = document.getElementById("add-deadline");
   if (!input.value.trim() || !categorySelect.value) return;
 
-  addTask(input.value, categorySelect.value, urgencySelect.value, deadlineInput.value);
+  addTask(input.value, categorySelect.value, "medium", null);
 
   input.value = "";
-  urgencySelect.value = "medium";
-  deadlineInput.value = "";
   input.focus();
 });
 
